@@ -76,9 +76,7 @@ When the user invokes `$<name>`, read `_meta/skills/<name>.md` and follow it. Do
 
 | Skill | Role | Writes |
 |---|---|---|
-| `$open-todos` | Cross-daily view of incomplete `- [ ]` items | none |
 | `$resurface-ideas` | Collect line-initial `IDEA:` / `Q:` markers | none |
-| `$extract` | Answer a question from dailies selected by tag and period, in chat | none |
 | `$tag-dailies` | Apply approved tags and `tagged:`, move to `daily/tagged/`, move empty dailies to `_trash/` | yes |
 | `$commit` | Review the working tree, refresh this file if the diff made it stale, then commit | this file only |
 
@@ -86,16 +84,28 @@ Routing from what the user says:
 
 | The user says | Do |
 |---|---|
-| "todo", "what's left" | `$open-todos` |
+| "todo", "what's left" | Collect open `- [ ]` items across dailies and answer in chat |
 | "ideas", "open questions" | `$resurface-ideas` |
-| "what did I write about X", "I want to look back" | `$extract` |
+| "what did I write about X", "I want to look back" | Read the relevant dailies and answer in chat |
 | "tag them", "process the untagged dailies" | `$tag-dailies` |
 | "commit", "save to git", the weekly commit | `$commit` |
 | "make this a note" | Propose → get approval → write to `permanent/` |
 | "summarize this" with no destination given | Answer in chat; offer to file it, do not write |
 | Retrieval, search, status | Answer read-only |
 
-Two guarantees the skills rely on. `$extract` always scans dailies without a `tagged:` field regardless of tag filtering, so a tagging backlog can never hide content. `$tag-dailies` treats the containing directory, never the `tagged:` field, as the record of what has been processed.
+`$tag-dailies` treats the containing directory, never the `tagged:` field, as the record of what has been processed.
+
+## Answering from notes
+
+Retrieval, reflection, and "what did I write about X" are ordinary conversation, not skills. They still follow these rules.
+
+- **Completeness.** When a tag filter narrows the search, always also read dailies in range that have no `tagged:` field. A tagging backlog must never be able to hide content from an answer.
+- Scope is `daily/` and `permanent/`. Include `references/` only when the user says so.
+- Checkbox lines are tasks, not thinking. For questions about memory, ideas, or patterns, answer from prose and ignore them. For questions about tasks, collect the open `- [ ]` items.
+- A checkbox line with no text after it is template residue, not a task. Never list it.
+- Cite the source day as `[[daily/YYYY-MM-DD]]`.
+- Return observation, not encouragement. When describing the user's own patterns, say what recurs in the notes rather than delivering a verdict about them.
+- Answer in chat. Do not write the answer into the vault; propose filing it if it seems worth keeping.
 
 ## Delegation
 
@@ -115,14 +125,14 @@ Mistakes that have happened here, or that the structure invites.
 | FAIL-04 | Using an unchecked `- [ ]` candidate tag as if approved | Do not use it until the user approves |
 | FAIL-05 | Adding procedure text to a discovery stub | Edit the canonical file in `_meta/` |
 | FAIL-06 | Editing a daily's body, checkbox state, or task text | Only `tags` / `tagged` frontmatter (INV-05) |
-| FAIL-07 | Treating checkbox lines as thinking in `$extract` | Answer from prose; tasks belong to `$open-todos` |
+| FAIL-07 | Treating checkbox lines as thinking when answering a question about ideas or patterns | Answer from prose; handle tasks separately |
 | FAIL-08 | Excluding untagged dailies because of a tag filter | Always scan untagged dailies in range |
 | FAIL-09 | Creating a `permanent/` note unprompted | Propose → approve → create |
 | FAIL-10 | Putting unedited AI output in `permanent/` | It goes to `references/` (INV-03) |
 | FAIL-11 | Moving a note to `daily/tagged/` before validating its frontmatter | Validate first; never overwrite a same-named file at the destination |
 | FAIL-12 | Rewriting block-format frontmatter back to inline | Leave it. Both formats exist in the vault |
 | FAIL-13 | Proposing scheduled tasks, automation, or a morning brief | Add one pull-style skill instead (INV-06) |
-| FAIL-14 | Inferring ideas from unmarked lines | Only `IDEA:` / `Q:` line-initial markers; older notes are a job for `$extract` |
+| FAIL-14 | Inferring ideas from unmarked lines in `$resurface-ideas` | Only `IDEA:` / `Q:` line-initial markers. For notes predating the convention, read them and answer directly instead |
 | FAIL-15 | Including `references/` in analysis by default | Only when the user includes it |
 | FAIL-16 | Deleting notes, changing checkbox state, or renaming tags without confirmation | Always confirm explicitly |
 | FAIL-17 | Putting placeholder prose in the template | An LLM reads it as content and pollutes extraction |
