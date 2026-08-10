@@ -1,0 +1,46 @@
+{
+  "daily-notes": [
+    {
+      "modifiers": [
+        "Mod",
+        "Shift"
+      ],
+      "key": "D"
+    }
+  ],
+  "insert-template": [
+    {
+      "modifiers": [
+        "Mod"
+      ],
+      "key": "T"
+    }
+  ],
+  "workspace:new-tab": [],
+  "local-dictation:start-dictation-session": [
+    {
+      "modifiers": [
+        "Mod"
+      ],
+      "key": "Z"
+    }
+  ],
+  "local-dictation:stop-dictation-session": [
+    {
+      "modifiers": [
+        "Mod",
+        "Shift"
+      ],
+      "key": "Z"
+    }
+  ],
+  "local-dictation:toggle-dictation-session": [
+    {
+      "modifiers": [
+        "Mod",
+        "Meta"
+      ],
+      "key": "Z"
+    }
+  ]
+}
