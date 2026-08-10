@@ -1,6 +1,6 @@
 ---
 name: commit
-description: "Review the working tree, update system-idea/SYSTEM.md only if the diff made it stale, then stage and create a git commit. Use when the user asks to commit, save changes to git, or do the weekly vault commit."
+description: "Review the working tree, update AGENTS.md only if the diff made it stale, then stage and create a git commit. Use when the user asks to commit, save changes to git, or do the weekly vault commit."
 ---
 
 発見用スタブ。手順の正本は `_meta/skills/commit.md`。

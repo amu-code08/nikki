@@ -1,6 +1,6 @@
 ---
 name: tag-dailies
-description: "Apply approved taxonomy tags and a tagged: marker to Markdown notes in daily/untagged/, then move reviewed notes to daily/tagged/. Use when the user asks to tag daily notes, process untagged dailies, or re-tag a specified time range in this vault."
+description: "Apply approved taxonomy tags and a tagged: marker to Markdown notes in daily/untagged/, move reviewed notes to daily/tagged/, and move dailies whose body is empty to _trash/. Use when the user asks to tag daily notes, process untagged dailies, or re-tag a specified time range in this vault."
 ---
 
 発見用スタブ。手順の正本は `_meta/skills/tag-dailies.md`。
