@@ -1,6 +1,5 @@
 ---
 tags: [finance/stablecoin, finance/equity-research, finance/equity-research/regional-banks]
-tagged: 2026-07-20
 ---
 いったんドラフト：
 

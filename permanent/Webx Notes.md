@@ -1,6 +1,5 @@
 ---
 tags: [finance/stablecoin, finance/equity-research]
-tagged: 2026-07-20
 ---
 主要企業：
 bitbank:
