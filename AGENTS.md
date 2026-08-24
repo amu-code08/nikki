@@ -17,7 +17,7 @@ The system is a trusted external memory: a place to write things down so they ar
 | INV-03 | `permanent/` holds only notes the user wrote or edited | Human thinking and AI output become indistinguishable |
 | INV-04 | Promoting to `permanent/` and changing the taxonomy are always the user's decisions | The approval model collapses |
 | INV-05 | In `daily/`, an agent writes only the frontmatter `tags` / `tagged` fields, plus what `$capture` appends verbatim — existing lines, checkbox state, and task text are off limits, always, and nothing an agent composed itself ever enters a daily. In `permanent/`, an agent writes only when explicitly asked, and never rewrites goal text or checkbox state in the two goal notes | The record stops being trustworthy — the worst failure available |
-| INV-06 | Pull only. No scheduled tasks, no push-style automation | This is the design that was abandoned in v1–v4; do not reintroduce it |
+| INV-06 | Pull only. No scheduled tasks, no push-style automation — this is about unrequested agent activity, not `git push`, which `$commit` performs when asked | This is the design that was abandoned in v1–v4; do not reintroduce it |
 | INV-07 | New needs are met by adding one skill, not by adding automation | Protects INV-06 |
 
 ## File routing
@@ -91,7 +91,7 @@ When the user invokes `$<name>`, read `_meta/skills/<name>.md` and follow it. Do
 | `$resurface-ideas` | Collect line-initial `IDEA:` / `Q:` markers | none |
 | `$monthly-review` | Compare a month's dailies against `Monthly Goals.md` and report in chat | none |
 | `$tag-dailies` | Apply approved tags and `tagged:`, cut multi-topic dailies into `slices/`, move processed dailies to `daily/tagged/` and prose-less ones to `_trash/` | yes |
-| `$commit` | Review the working tree, refresh this file if the diff made it stale, then commit | this file only |
+| `$commit` | Review the working tree, refresh this file if the diff made it stale, then commit and push to `origin` | this file only |
 
 Routing from what the user says:
 
@@ -103,7 +103,7 @@ Routing from what the user says:
 | "what did I write about X", "I want to look back" | Read the relevant dailies and answer in chat |
 | "tag them", "process the untagged dailies" | `$tag-dailies` |
 | "how did last month go", "monthly review" | `$monthly-review` |
-| "commit", "save to git", the weekly commit | `$commit` |
+| "commit", "save to git", "push", the weekly commit | `$commit`. It commits and pushes under one approval |
 | "make this a note" | Propose → get approval → write to `permanent/` |
 | "summarize this" with no destination given | Answer in chat; offer to file it, do not write |
 | Retrieval, search, status | Answer read-only |
@@ -135,7 +135,7 @@ The vault is pushed to a remote and read on a phone, so what used to stay on one
 
 How to raise it:
 
-- **Flag it; never act on it.** Do not edit, redact, mask, move, or delete the note (INV-05), and do not refuse to commit. The call is the user's.
+- **Flag it; never act on it.** Do not edit, redact, mask, move, or delete the note (INV-05), and do not refuse to commit or push. The call is the user's. Raise it *before* asking for the `$commit` approval, since that approval now carries the push too.
 - Cite the file and line and say specifically why it fits the category. A general caution is worthless.
 - Scope the check to what you are already reading — the notes being processed, or the diff being committed. Do not sweep the vault for this, and do not re-raise something the user has already seen and chosen to keep.
 - The trigger is non-public specifics, not the fact that this vault is about finance. Do not flag every company name. Within that limit, asking and being wrong is cheap; staying quiet is not.
@@ -174,7 +174,7 @@ Mistakes that have happened here, or that the structure invites.
 | FAIL-20 | Answering in English | Japanese; technical terms may stay English (see Scope) |
 | FAIL-21 | Bulk-editing or reformatting `daily/` | Do not touch it without an explicit request |
 | FAIL-22 | Asking clarifying question after clarifying question | One question, then proceed and report assumptions |
-| FAIL-23 | `git push`, `--amend`, `reset --hard`, `--no-verify` | Never. Remote and history rewriting are the user's |
+| FAIL-23 | `push --force`, `--amend`, `reset --hard`, `--no-verify` | Never. Rewriting history, local or remote, is the user's. A plain `git push` of the current branch is allowed, but only inside `$commit` and only under the approval given in that run |
 | FAIL-24 | `git add -A` sweeping in the user's unrelated Obsidian edits | List the mixture and let the user decide the grouping |
 | FAIL-25 | Updating this file on every commit, or inventing changes not in the diff | Only when the judgment table says so, and only facts visible in the diff |
 | FAIL-26 | Counting template residue (`## todo`, empty `- [ ]`) as body content when judging emptiness | Notes with real content also end with that residue. It is not content |
@@ -186,7 +186,7 @@ Mistakes that have happened here, or that the structure invites.
 | FAIL-32 | Counting `slices/` in tag distributions, todo collection, or `$resurface-ideas` | The daily is the source of truth. Reading both counts the same text twice |
 | FAIL-33 | Copying checkbox lines into a slice | The state drifts the moment the user ticks the box in the daily. Slices carry prose only |
 | FAIL-34 | Moving a todo-only daily to `_trash/` without quoting its task lines | `_trash/` is outside all analysis, so any open `- [ ]` in it silently disappears from todo collection and `$monthly-review`. The report is the only thing that keeps it findable |
-| FAIL-35 | Redacting a note, or refusing to commit, over suspected sensitive content | Report it with the file and line and let the user decide. Quietly altering the record is the worse failure (INV-05) |
+| FAIL-35 | Redacting a note, or refusing to commit or push, over suspected sensitive content | Report it with the file and line and let the user decide. Quietly altering the record is the worse failure (INV-05) |
 | FAIL-36 | Staying silent about likely MNPI because flagging it felt presumptuous | Once the repo has a remote, a push cannot be taken back. Say it and be wrong |
 | FAIL-37 | Moving a daily to `daily/tagged/` before its tags, slices, and `tagged:` are all in place | The move is what marks the note processed, so a premature one drops it out of `daily/untagged/` and it is never picked up again. Move it last, after `tagged:` |
 | FAIL-38 | Re-tagging a note that sits in `daily/untagged/` but already has `tagged:` | It is an interrupted run, not an unprocessed note. Move it to `daily/tagged/` and leave its tags and slices alone |
@@ -200,7 +200,7 @@ This vault must stay operable by any agent that can read, search, and write file
 
 ## How the user works
 
-Write freely in a daily under `daily/untagged/`, several topics mixed, optionally marking lines with `IDEA:` or `Q:`. Away from the desk, `$capture <text>` appends to the same note without opening Obsidian. Non-daily notes land in `inbox/` and get filed to `permanent/` or `references/`. Tagging happens when the user remembers to run `$tag-dailies`. Extraction happens on demand and returns in chat. Promotion and taxonomy changes are always the user's call. Commits are roughly weekly via `$commit`; pushing is always done by the user.
+Write freely in a daily under `daily/untagged/`, several topics mixed, optionally marking lines with `IDEA:` or `Q:`. Away from the desk, `$capture <text>` appends to the same note without opening Obsidian. Non-daily notes land in `inbox/` and get filed to `permanent/` or `references/`. Tagging happens when the user remembers to run `$tag-dailies`. Extraction happens on demand and returns in chat. Promotion and taxonomy changes are always the user's call. Commits are roughly weekly via `$commit`, which pushes to `origin` in the same run, under the one approval it asks for.
 
 ## Maintenance
 

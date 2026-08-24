@@ -1,21 +1,26 @@
 ---
 name: commit
-description: "Review the working tree, update AGENTS.md only if the diff made it stale, then stage and create a git commit. Use when the user asks to commit, save changes to git, or do the weekly vault commit."
+description: "Review the working tree, update AGENTS.md only if the diff made it stale, then stage, commit, and push to origin. Use when the user asks to commit, save changes to git, push the vault, or do the weekly vault commit."
 ---
 
-作業ツリーの差分を読み、**その差分が `AGENTS.md` の記述を古くした場合に限り** `AGENTS.md` を直し、同じコミットに含めてからコミットする。
+作業ツリーの差分を読み、**その差分が `AGENTS.md` の記述を古くした場合に限り** `AGENTS.md` を直し、同じコミットに含めてからコミットし、`origin` へ push する。
 
 構成が変わったのに運用ルールが古いまま残る状態を防ぐのが目的。**毎回 `AGENTS.md` を更新する skill ではない。**
 
 ## 手順
 
-1. `git status --short` と `git diff HEAD` を読む。差分がなければその旨を報告して終了する。
+1. `git status --short` と `git diff HEAD` を読む。差分がなければ、`git status -sb` で未 push のコミットが無いかを見る。あればその一覧を示して push だけ行うか尋ね、承認されたら手順8へ飛ぶ。それも無ければその旨を報告して終了する。
 2. **無関係な変更の分離**:今回の意図と無関係な変更(人間が Obsidian で行ったノートの追加・削除・移動など)が混ざっていないか確認する。混ざっていれば一覧で示し、同じコミットに含めるか分けるかを人間に決めさせる。勝手に `git add -A` しない。`daily/untagged/` から `daily/tagged/` への移動は `$tag-dailies` の通常の出力であり、無関係な変更ではない。
-3. **機密の確認**:コミット対象の差分に、インサイダー情報(MNPI)や勤務先の機密にあたりうる記述が新しく含まれていないか見る。判定基準は `AGENTS.md` の「Sensitive content」。該当しそうなものがあれば、ファイル・行・なぜ該当しそうかを手順6の確認に併せて提示する。**見つけてもコミットを止めず、本文も書き換えない**(FAIL-35)。リモートへ push すると取り消せないため、ここが最後の関所になる。すでに人間が見て残すと決めたものを蒸し返さない。
+3. **機密の確認**:コミット対象の差分に、インサイダー情報(MNPI)や勤務先の機密にあたりうる記述が新しく含まれていないか見る。判定基準は `AGENTS.md` の「Sensitive content」。該当しそうなものがあれば、ファイル・行・なぜ該当しそうかを手順6の確認に併せて提示する。**見つけてもコミットや push を止めず、本文も書き換えない**(FAIL-35)。すでに人間が見て残すと決めたものを蒸し返さない。
+
+   **この skill は同じ実行の中で push まで行う。** 一度リモートへ出たものは取り消せないので、ここが最後の関所であり、手順6の承認はその関所を通す判断でもある。だから懸念は承認を求める**前に**必ず提示する。
 4. 下の「AGENTS.md 更新要否」に照らして判定する。判定の根拠は必ず**実際の差分**とし、推測で判断しない。
 5. 更新が必要な場合のみ `AGENTS.md` を直す。差分に現れた事実だけを反映する。**新しい不変則(INV)や失敗モード(FAIL)を発明しない。** 節の追加・削除など構造的な変更が要るときは、その理由を添えて先に人間へ提案する。
-6. **確認は1回だけ**:コミット対象ファイル、コミットメッセージ案、`AGENTS.md` の変更点(あれば)、手順3で見つかった懸念(あれば)をまとめて提示し、承認を得る。
+6. **確認は1回だけ**:コミット対象ファイル、コミットメッセージ案、`AGENTS.md` の変更点(あれば)、手順3で見つかった懸念(あれば)、および**push 先(`origin` と対象ブランチ)**をまとめて提示し、承認を得る。この1回の承認がコミットと push の両方を覆う。
 7. 承認後に `git add <対象>` → `git commit` を実行する。結果のコミットハッシュと件名を報告する。
+8. `git push origin <現在のブランチ>` を実行する。成功したらリモートのブランチ名と、押し上げたコミット数を報告する。
+   - **拒否された場合(non-fast-forward など)は、そこで止めて人間に報告する。** `--force` も `--force-with-lease` も使わない。fetch・merge・rebase のどれを選ぶかは人間の判断であり、この skill は決めない。コミットは既に手元にあるので、失われるものは何もない。
+   - リモートが未設定、または現在のブランチに upstream が無い場合も、勝手に作らずに報告して終了する。
 
 ## AGENTS.md 更新要否
 
@@ -48,7 +53,7 @@ description: "Review the working tree, update AGENTS.md only if the diff made it
 
 ## 制約
 
-- **`git push` を実行しない。** リモートへの反映は常に人間が行う。
+- **push してよいのは、手順6の承認を得た現在のブランチだけである。** `--force` / `--force-with-lease` / `--all` / タグの push を使わない。他のブランチを push しない。既存のリモートブランチを消す・書き換える操作をしない。
 - `git reset --hard` / `git checkout --` / `git clean` / 強制系オプションを使わない。作業ツリーの破棄が必要に見える場合は、実行せず人間に報告する。
 - `--amend` を使わない。既存コミットを書き換えず、新しいコミットを作る。
 - `--no-verify` などフックの迂回をしない。
