@@ -1,4 +1,22 @@
+# 端末ごとに書き換わる Obsidian の状態。PC と携帯が同じファイルを毎回上書きするため、
+# 追跡すると衝突の実害が出る唯一の場所
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
 .obsidian/cache
+
+# Obsidian 自身のゴミ箱。vault の `_trash/` とは別物
 .trash/
+
+# プラグイン本体。第三者のコードで、各端末で再インストールできる
+.obsidian/plugins/
+
+# OS が勝手に作るもの
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 追跡し続けるもの（迷ったとき用のメモ）
+#   .obsidian/ の他の設定 — daily-notes.json が無いと携帯が daily を別フォルダに作り、
+#                            `tagged:` による未処理判定が壊れる
+#   slices/    — LLM の判断で切っており、再生成しても同じにならない。実質は手作業の成果物
+#   _trash/    — 「移動は取り消せる」の担保。コミット前に移されたノートはここにしか無い

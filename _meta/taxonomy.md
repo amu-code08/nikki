@@ -27,6 +27,7 @@ updated: 2026-08-10
 - [x] life/relationships — 家族・友人・恋人との距離感・消耗しない関わり方
 - [x] life/health — 酒さ/V-beam・運動・睡眠など身体のこと
 - [x] life/beauty — 美容院・スタイル・ロールモデル
+- [x] life/personality —性格・癖・個人的な嗜好
 - [x] productivity/github - githubを使った効率化、スマホPC連携のテーマ
 
 ## 軸タグ
@@ -34,5 +35,8 @@ updated: 2026-08-10
 話題ではなくノートの属性を表す。全ノートに付くのが正常なので粒度の原則は適用しない。判定基準は `_meta/skills/tag-dailies.md`。
 
 - [x] type/daily — デイリーノート(`_templates/daily.md` が自動付与。tag-dailies は付けない)
+- [x] type/north-star — 長期の方向性。チェックボックスを持たず、達成判定の対象にしない
+- [x] type/monthly-goals — 月次の検証可能な目標。`- [ ]` だけが判定対象
+
 - [x] lang/ja — 本文に日本語の文が含まれる
 - [x] lang/en — 本文に英語の文が含まれる(日本語と併記なら lang/ja と両方付く)
