@@ -6,24 +6,27 @@ This is a personal, local Obsidian vault, not a conventional software project. T
 
 This file is the only required entry point. It routes to everything else by path, and it is authoritative: if any other file in the vault disagrees with it, this file wins and the other file gets fixed. Output is Japanese (technical terms may stay English).
 
-The system is a trusted external memory: a place to write things down so they are not forgotten. Capture is free-form in `daily/`; everything else — tagging, retrieval, monthly review — runs only when the user asks for it.
+The system is a trusted external memory: a place to write things down so they are not forgotten. Capture is free-form in `daily/untagged/`; everything else — tagging, retrieval, monthly review — runs only when the user asks for it.
 
 ## Invariants
 
 | ID | Rule | Why it matters |
 |---|---|---|
-| INV-01 | The user writes only in `daily/`. Mixing several topics in one file is normal | The capture habit is the whole system; friction here stops the record |
+| INV-01 | The user writes only in `daily/untagged/`. Mixing several topics in one file is normal | The capture habit is the whole system; friction here stops the record |
 | INV-02 | Do not accumulate derived artifacts. Return extractions in chat. The sole exception is `slices/`, which `$tag-dailies` writes by copying the user's own lines verbatim — never a summary, never generated prose | The vault fills with AI output and stops being trustworthy |
 | INV-03 | `permanent/` holds only notes the user wrote or edited | Human thinking and AI output become indistinguishable |
 | INV-04 | Promoting to `permanent/` and changing the taxonomy are always the user's decisions | The approval model collapses |
-| INV-05 | In `daily/`, an agent writes only the frontmatter `tags` / `tagged` fields — bodies, checkbox state, and task text are off limits, always. In `permanent/`, an agent writes only when explicitly asked, and never rewrites goal text or checkbox state in the two goal notes | The record stops being trustworthy — the worst failure available |
+| INV-05 | In `daily/`, an agent writes only the frontmatter `tags` / `tagged` fields, plus what `$capture` appends verbatim — existing lines, checkbox state, and task text are off limits, always, and nothing an agent composed itself ever enters a daily. In `permanent/`, an agent writes only when explicitly asked, and never rewrites goal text or checkbox state in the two goal notes | The record stops being trustworthy — the worst failure available |
 | INV-06 | Pull only. No scheduled tasks, no push-style automation | This is the design that was abandoned in v1–v4; do not reintroduce it |
 | INV-07 | New needs are met by adding one skill, not by adding automation | Protects INV-06 |
 
 ## File routing
 
-- `daily/` holds chronological capture notes named `YYYY-MM-DD.md`, flat, with no subdirectories. **Every daily stays here permanently as the source of truth**; nothing is ever moved out except to `_trash/`. Nothing but dated daily notes belongs here. Do not bulk-edit or reformat them unless asked.
-  - **The `tagged:` frontmatter field is the record of whether `$tag-dailies` has processed a note** — no field means unprocessed. It is written last, only once tagging and slicing have both succeeded. Obsidian creates new dailies directly in `daily/`.
+- `daily/` holds chronological capture notes named `YYYY-MM-DD.md`, split by processing state across exactly two subdirectories and no others. **Every daily stays under `daily/` permanently as the source of truth**; nothing is ever moved out except to `_trash/`. Nothing but dated daily notes belongs here. Do not bulk-edit or reformat them unless asked.
+  - `daily/untagged/` is where capture lands. Obsidian creates new dailies directly here, and they stay until `$tag-dailies` picks them up.
+  - `daily/tagged/` is where `$tag-dailies` moves a note once tagging and slicing have both succeeded.
+  - **Which folder a note sits in is the record of whether `$tag-dailies` has processed it**; the `tagged:` frontmatter field carries the date it happened. They are written in this order — tags, slices, `tagged:`, then the move — so the move is always last. A note still in `daily/untagged/` that already has `tagged:` is an interrupted run: finish it by moving the note, not by tagging it again.
+  - Everything that reads dailies reads `daily/` recursively. A note must never be missed because of which subfolder it is in.
 - `slices/` holds per-topic cuts of multi-topic dailies, written only by `$tag-dailies`, named `YYYY-MM-DD--<domain>.md`. Bodies are **verbatim copies** of the user's own lines — a slice is never a summary. The daily remains the source of truth. Exclude `slices/` from note analysis by default, or the same text gets counted twice.
 - `inbox/` is where Obsidian puts new non-daily notes. Treat it as unfiled: the user decides whether each becomes a `permanent/` or `references/` note. Do not let notes accumulate silently — surface them when relevant.
 - `permanent/` holds durable notes written or edited by the user. Propose before creating one unless asked to create it.
@@ -47,11 +50,13 @@ The system is a trusted external memory: a place to write things down so they ar
 
 | Path | Read | Write | Condition |
 |---|---|---|---|
-| `daily/**` note body | ○ | **×** | INV-05. Even on explicit request, confirm first |
+| `daily/**` existing body lines | ○ | **×** | INV-05. Even on explicit request, confirm first |
+| `daily/untagged/<today>.md` body, append only | ○ | △ | Via `$capture` only, and only the user's own words copied verbatim. Never prose you composed, never an edit to a line already there |
 | `daily/**` frontmatter `tags` / `tagged` | ○ | △ | Via `$tag-dailies`, or on direct request |
 | `daily/**` checkbox state | ○ | **×** | The user marks things done |
 | `daily/**` deletion | ○ | **×** | Agents never delete a daily. Prose-less ones are moved to `_trash/` |
 | `daily/**` → `_trash/` move | ○ | △ | Only notes `$tag-dailies` read and confirmed to hold no prose — empty, or checkbox lines only. No approval needed — the move is reversible — but always report what moved, and quote the task lines when the note was a todo-only one |
+| `daily/untagged/` → `daily/tagged/` move | ○ | △ | Only via `$tag-dailies`, and only once tags, slices, and `tagged:` are all in place. No approval needed — the move is reversible — but always report what moved |
 | `slices/**` creation | △ | △ | Only via `$tag-dailies`, and only as verbatim copies of daily lines. Never overwrite an existing slice |
 | `slices/**` editing and deletion | △ | **×** | Reorganizing, rewriting, and deleting slices is the user's job |
 | `_trash/**` | △ | **×** | Outside all analysis. Only the user removes anything from here |
@@ -82,15 +87,17 @@ When the user invokes `$<name>`, read `_meta/skills/<name>.md` and follow it. Do
 
 | Skill | Role | Writes |
 |---|---|---|
+| `$capture` | Append the user's message verbatim to today's note in `daily/untagged/` | yes |
 | `$resurface-ideas` | Collect line-initial `IDEA:` / `Q:` markers | none |
 | `$monthly-review` | Compare a month's dailies against `Monthly Goals.md` and report in chat | none |
-| `$tag-dailies` | Apply approved tags and `tagged:`, cut multi-topic dailies into `slices/`, move prose-less dailies to `_trash/` | yes |
+| `$tag-dailies` | Apply approved tags and `tagged:`, cut multi-topic dailies into `slices/`, move processed dailies to `daily/tagged/` and prose-less ones to `_trash/` | yes |
 | `$commit` | Review the working tree, refresh this file if the diff made it stale, then commit | this file only |
 
 Routing from what the user says:
 
 | The user says | Do |
 |---|---|
+| `$capture <text>`, "write this down", "jot this into today" | `$capture`. Append the text verbatim to today's daily; never compose the line yourself |
 | "todo", "what's left" | Collect open `- [ ]` items across dailies and answer in chat. The checkboxes in `Monthly Goals.md` are goals, not todos — leave them to `$monthly-review` |
 | "ideas", "open questions" | `$resurface-ideas` |
 | "what did I write about X", "I want to look back" | Read the relevant dailies and answer in chat |
@@ -101,19 +108,19 @@ Routing from what the user says:
 | "summarize this" with no destination given | Answer in chat; offer to file it, do not write |
 | Retrieval, search, status | Answer read-only |
 
-`$tag-dailies` treats the `tagged:` field as the record of what has been processed, and never moves a daily out of `daily/`.
+`$tag-dailies` takes whatever sits in `daily/untagged/` and moves each processed note to `daily/tagged/`. It never moves a daily out of `daily/`; `_trash/` is the one exception, and only for notes with no prose in them.
 
-`$monthly-review` reads the whole month from `daily/`, processed or not, which is why it is a separate skill rather than a step inside `$tag-dailies` — that one only ever sees notes with no `tagged:` field.
+`$monthly-review` reads the whole month from `daily/` — both subfolders — which is why it is a separate skill rather than a step inside `$tag-dailies` — that one only ever sees `daily/untagged/`.
 
 ## Answering from notes
 
 Retrieval, reflection, and "what did I write about X" are ordinary conversation, not skills. They still follow these rules.
 
-- **Completeness.** When a tag filter narrows the search, always also read dailies in range that have no `tagged:` field. A tagging backlog must never be able to hide content from an answer.
-- Scope is `daily/` and `permanent/`. Include `references/` and `slices/` only when the user says so. `slices/` repeats text that is already in `daily/`, so reading both double-counts it.
+- **Completeness.** When a tag filter narrows the search, always also read `daily/untagged/` in range. A tagging backlog must never be able to hide content from an answer.
+- Scope is `daily/` — read it recursively, so both `untagged/` and `tagged/` — and `permanent/`. Include `references/` and `slices/` only when the user says so. `slices/` repeats text that is already in `daily/`, so reading both double-counts it.
 - Checkbox lines are tasks, not thinking. For questions about memory, ideas, or patterns, answer from prose and ignore them. For questions about tasks, collect the open `- [ ]` items.
 - A checkbox line with no text after it is template residue, not a task. Never list it.
-- Cite the source day as `[[daily/YYYY-MM-DD]]`.
+- Cite the source day as `[[YYYY-MM-DD]]` — filename only, never a path, so the citation keeps resolving after the note moves from `daily/untagged/` to `daily/tagged/`.
 - Return observation, not encouragement. When describing the user's own patterns, say what recurs in the notes rather than delivering a verdict about them.
 - Answer in chat. Do not write the answer into the vault; propose filing it if it seems worth keeping.
 - When a daily indicates an open item in `Monthly Goals.md` was met, say so and cite the day. Never tick the box yourself — report the evidence and let the user do it. North Star holds no checkboxes and is never evaluated for completion.
@@ -181,6 +188,11 @@ Mistakes that have happened here, or that the structure invites.
 | FAIL-34 | Moving a todo-only daily to `_trash/` without quoting its task lines | `_trash/` is outside all analysis, so any open `- [ ]` in it silently disappears from todo collection and `$monthly-review`. The report is the only thing that keeps it findable |
 | FAIL-35 | Redacting a note, or refusing to commit, over suspected sensitive content | Report it with the file and line and let the user decide. Quietly altering the record is the worse failure (INV-05) |
 | FAIL-36 | Staying silent about likely MNPI because flagging it felt presumptuous | Once the repo has a remote, a push cannot be taken back. Say it and be wrong |
+| FAIL-37 | Moving a daily to `daily/tagged/` before its tags, slices, and `tagged:` are all in place | The move is what marks the note processed, so a premature one drops it out of `daily/untagged/` and it is never picked up again. Move it last, after `tagged:` |
+| FAIL-38 | Re-tagging a note that sits in `daily/untagged/` but already has `tagged:` | It is an interrupted run, not an unprocessed note. Move it to `daily/tagged/` and leave its tags and slices alone |
+| FAIL-39 | Putting anything but the user's own words into a daily through `$capture` — a summary, a tidied version, an added timestamp, your own reply | Copy the message verbatim. Once `daily/` holds AI prose, INV-05's guarantee is gone and no line in the vault can be trusted as the user's |
+| FAIL-40 | Appending a `$capture` to the end of the file, so the text lands under `## todo` | Insert it above the `## todo` heading. Prose under a todo heading breaks both the emptiness judgment and the fragmentation in `$tag-dailies` |
+| FAIL-41 | Capturing a message the user did not actually invoke `$capture` on | Only an explicit invocation captures. Everything else is conversation — writing it down anyway is push-style automation (INV-06) |
 
 ## Portability
 
@@ -188,7 +200,7 @@ This vault must stay operable by any agent that can read, search, and write file
 
 ## How the user works
 
-Write freely in a daily, several topics mixed, optionally marking lines with `IDEA:` or `Q:`. Non-daily notes land in `inbox/` and get filed to `permanent/` or `references/`. Tagging happens when the user remembers to run `$tag-dailies`. Extraction happens on demand and returns in chat. Promotion and taxonomy changes are always the user's call. Commits are roughly weekly via `$commit`; pushing is always done by the user.
+Write freely in a daily under `daily/untagged/`, several topics mixed, optionally marking lines with `IDEA:` or `Q:`. Away from the desk, `$capture <text>` appends to the same note without opening Obsidian. Non-daily notes land in `inbox/` and get filed to `permanent/` or `references/`. Tagging happens when the user remembers to run `$tag-dailies`. Extraction happens on demand and returns in chat. Promotion and taxonomy changes are always the user's call. Commits are roughly weekly via `$commit`; pushing is always done by the user.
 
 ## Maintenance
 

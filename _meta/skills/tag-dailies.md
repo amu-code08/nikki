@@ -1,22 +1,25 @@
 ---
 name: tag-dailies
-description: "Apply approved taxonomy tags and a tagged: marker to daily notes that lack one, split multi-topic dailies into per-topic notes under slices/, and move dailies with no prose — empty, or a todo list only — to _trash/. Use when the user asks to tag daily notes, process untagged dailies, or re-tag a specified time range in this vault."
+description: "Apply approved taxonomy tags and a tagged: marker to daily notes in daily/untagged/, split multi-topic dailies into per-topic notes under slices/, move each processed note to daily/tagged/, and move dailies with no prose — empty, or a todo list only — to _trash/. Use when the user asks to tag daily notes, process untagged dailies, or re-tag a specified time range in this vault."
 ---
 
-`daily/` の Markdown ノートのうち `tagged:` を持たないものを読み、`_meta/taxonomy.md` の許可タグ(`- [x]` 行)から該当するものを frontmatter の `tags:` に付与する。複数の話題が混ざったノートは話題ごとに `slices/` へ切り出す。処理済みのノートには frontmatter の `tagged:` で印を付ける。**daily は正本として `daily/` に残り続け、移動しない。**
+`daily/untagged/` の Markdown ノートを読み、`_meta/taxonomy.md` の許可タグ(`- [x]` 行)から該当するものを frontmatter の `tags:` に付与する。複数の話題が混ざったノートは話題ごとに `slices/` へ切り出す。処理済みのノートには frontmatter の `tagged:` で印を付け、**最後に `daily/tagged/` へ移す。** daily は正本として `daily/` の下に残り続け、`_trash/` 行きと判定したものを除いて外へは出さない。
 
 1. `_meta/taxonomy.md` を読む。チェック済み `- [x]` の行だけが許可タグであり、未チェック `- [ ]` は未承認候補である。
-2. デフォルトでは `daily/` 内の Markdown ノートのうち、**frontmatter に `tagged:` を持たないもの**を対象にする。`daily/` はフラットであり、ノートは処理後もここに残り続けるので、`tagged:` の有無が未処理・処理済みの唯一の記録である。人間が期間指定または再タグ付けを指定した場合は、指定範囲のノートを `tagged:` の有無に関わらず対象にする。別のパスを明示された場合は、その指定を優先する。
+2. デフォルトでは **`daily/untagged/` にある Markdown ノートすべて**を対象にする。どちらのフォルダに置かれているかが未処理・処理済みの記録であり、`tagged:` はそれが起きた日付を持つ。人間が期間指定または再タグ付けを指定した場合は、`daily/tagged/` にあるノートも指定範囲であれば対象にする。別のパスを明示された場合は、その指定を優先する。
 
-   対象の特定は `rg --files-without-match '^tagged:' daily` のような、**ファイル名だけを返す検索**で行う。`daily/` 全体を読んでから振り分けてはならない。本文を読むのは、対象と決まったノートだけである。この一手でコストは未処理の枚数にしか比例しなくなる。
-3. 対象ノートを読んだ上で、下の「`_trash/` へ移すデイリーの判定」に従って移動対象を選り分ける。移動対象と判定したノートにはタグを付けず、`tagged:` も付けない。分割の対象にもしない。移動候補として集めておき、手順9で処理する。
+   対象の一覧は `ls daily/untagged` のような、**ファイル名だけを返す操作**で取る。`daily/` 全体を読んでから振り分けてはならない。本文を読むのは、対象と決まったノートだけである。この一手でコストは未処理の枚数にしか比例しなくなる。
+
+   `daily/untagged/` にありながら既に `tagged:` を持つノートは、前回の実行が移動の直前で中断したものである。タグ付けも分割もやり直さず、手順9の移動だけを行う(FAIL-38)。
+3. 対象ノートを読んだ上で、下の「`_trash/` へ移すデイリーの判定」に従って移動対象を選り分ける。移動対象と判定したノートにはタグを付けず、`tagged:` も付けない。分割の対象にもしない。移動候補として集めておき、手順10で処理する。
 4. 残ったノートの本文を、下の「本文の断片化」に従って内容のまとまり(断片)に区切る。元のノートは読むだけで変更しない。
 5. 各断片に、その内容に該当する許可タグを**ちょうど1つ**付ける。どの許可タグにも当てはまらない断片にはタグを付けない。
 6. 許可タグでは適切に表現できない断片があり、新しいタグを付ける価値がある場合は、処理中にユーザーへ候補を1件ずつ提示して承認・却下を尋ねる。候補タグ名、短い説明、その断片に必要な理由を示し、回答を得るまでそのノートの処理を完了しない。ユーザーが承認した場合だけ、taxonomy に許可済みの `- [x]` タグとして追加して使う。却下された場合はタグも taxonomy の変更も行わず、既存の許可タグだけで処理を続ける。未チェック候補を見つけた場合も、使う前に同じ確認を行う。
 7. 下の「話題ごとの分割」に従い、条件を満たすノートから `slices/` のノートを生成する。**元のノートは一切変更しない。**
-8. ノートの frontmatter を更新する。`tags:` は**その日の断片に付いたタグの和集合**とし、既存の `tags:` は残す。あわせて下の「言語タグ」に従い `lang/ja` / `lang/en` を付ける。**最後に `tagged: <実行日 YYYY-MM-DD>` を加える。** frontmatter がないノートには、本文を変えずにファイル先頭へ inline 形式の frontmatter を作る。変更後のノートを再読して YAML/frontmatter を確認する。slice の生成に失敗したノートには `tagged:` を書かない。書いた時点でそのノートは処理済みとして扱われ、二度と拾われなくなるためである。
-9. 手順3で集めた移動対象のノートを `_trash/` へ移動する。ファイル名は変えない。**削除しない。** 移動は可逆なので承認を求めず、処理の最後に移動した日付の一覧を必ず報告する。ToDo だけと判定したノートについては、上の「ToDo だけのノートを移すときの報告」に従いタスク行も添える。移動先に同名ファイルがある場合は上書きせず、そのノートは元の場所に残して人間に報告する。
-10. 処理した daily に**当月より前の月**のものが含まれていた場合、最後に一言だけ案内する:「N月分のレビューはまだのようです。`$monthly-review YYYY-MM` を実行しますか」。案内するだけで、実行はしない。レビューはこの skill の仕事ではない — 対象範囲が違う(この skill は `tagged:` の無いノートしか見ないが、月次レビューはその月の全 daily を見る)。
+8. ノートの frontmatter を更新する。`tags:` は**その日の断片に付いたタグの和集合**とし、既存の `tags:` は残す。あわせて下の「言語タグ」に従い `lang/ja` / `lang/en` を付ける。**最後に `tagged: <実行日 YYYY-MM-DD>` を加える。** frontmatter がないノートには、本文を変えずにファイル先頭へ inline 形式の frontmatter を作る。変更後のノートを再読して YAML/frontmatter を確認する。slice の生成に失敗したノートには `tagged:` を書かず、手順9の移動も行わない。`daily/untagged/` に残しておけば次回また拾われる。
+9. `tagged:` まで書けたノートを `daily/tagged/` へ移動する。ファイル名は変えない。**この移動が「処理済み」の記録であり、そのノートに対する最後の操作にする**(FAIL-37)。タグ付けか分割のどちらかが未完のノートは `daily/untagged/` に残す。移動先に同名ファイルがある場合は上書きせず、そのノートを `daily/untagged/` に残して人間に報告する。移動は可逆なので承認を求めず、処理の最後に移動した日付の一覧を必ず報告する。
+10. 手順3で集めた移動対象のノートを `_trash/` へ移動する。ファイル名は変えない。**削除しない。** 移動は可逆なので承認を求めず、処理の最後に移動した日付の一覧を必ず報告する。ToDo だけと判定したノートについては、上の「ToDo だけのノートを移すときの報告」に従いタスク行も添える。移動先に同名ファイルがある場合は上書きせず、そのノートは元の場所に残して人間に報告する。
+11. 処理した daily に**当月より前の月**のものが含まれていた場合、最後に一言だけ案内する:「N月分のレビューはまだのようです。`$monthly-review YYYY-MM` を実行しますか」。案内するだけで、実行はしない。レビューはこの skill の仕事ではない — 対象範囲が違う(この skill は `daily/untagged/` しか見ないが、月次レビューはその月の全 daily を両フォルダから見る)。
 
 ## 本文の断片化
 
@@ -134,7 +137,7 @@ sliced: <実行日 YYYY-MM-DD>
 ## 制約
 
 - taxonomy の許可タグを、この skill の判断で削除・改名・チェック付けしない。ユーザーが処理中に明示承認した新タグだけを許可済みに追加できる。
-- daily の本文、チェック状態、タスク本文を編集しない。daily に対して書いてよいのは frontmatter の `tags` と `tagged:` の追記だけである。分割は元ノートを読むだけで、一切変更しない。
+- daily の本文、チェック状態、タスク本文を編集しない。daily に対して書いてよいのは frontmatter の `tags` と `tagged:` の追記、および `daily/tagged/` への移動だけである。分割は元ノートを読むだけで、一切変更しない。
 - `slices/` の本文を要約・言い換え・補完しない。逐語コピー以外を書かない。
 - `slices/` を分析対象に含めない。タグ分布の集計、todo 収集、`$resurface-ideas`、通常の読解はすべて daily 側を見る。含めると同じ記述を二重に数える。
 - 既存の slice を削除・改名・上書きしない。整理は人間の仕事。
@@ -143,7 +146,8 @@ sliced: <実行日 YYYY-MM-DD>
 - 改名・統合の既存ノートへの反映は、明示依頼時だけ frontmatter に対する機械的な置換で行う。新タグの過去ノートへの遡及も明示依頼時だけ行う。
 - frontmatter は inline 形式(`tags: [type/daily, finance/equity-research]`)を正とする。Obsidian が block 形式に書き換えたものは直さない。
 - 判断に迷うタグは付けない。本文インラインの `#hashtag` は使わない。
-- デフォルト処理では `tagged:` を持つノートを対象にしない。**daily を `daily/` の外へ移動しない**(`_trash/` 行きの判定に該当したものを除く)。正本は `daily/` に残り続ける。
+- デフォルト処理では `daily/tagged/` のノートを対象にしない。**daily を `daily/` の外へ移動しない**(`_trash/` 行きの判定に該当したものを除く)。正本は `daily/` の下に残り続ける。
+- `daily/` の下に `untagged/` と `tagged/` 以外のフォルダを作らない。日付以外の名前のノートを置かない。
 - **ノートを削除しない。** 空と判定したノートは `_trash/` へ移動するだけである。`_trash/` から消してよいのは人間だけ。
 - `_trash/` への移動は、この skill が読んで判定したノートに限る。読んでいないノートを動かさない。
 - 人間が期間指定や再タグ付けで処理済みのノートを対象にした場合も同じ判定と移動を適用する。

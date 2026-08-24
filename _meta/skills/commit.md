@@ -10,7 +10,7 @@ description: "Review the working tree, update AGENTS.md only if the diff made it
 ## 手順
 
 1. `git status --short` と `git diff HEAD` を読む。差分がなければその旨を報告して終了する。
-2. **無関係な変更の分離**:今回の意図と無関係な変更(人間が Obsidian で行ったノートの追加・削除・移動など)が混ざっていないか確認する。混ざっていれば一覧で示し、同じコミットに含めるか分けるかを人間に決めさせる。勝手に `git add -A` しない。
+2. **無関係な変更の分離**:今回の意図と無関係な変更(人間が Obsidian で行ったノートの追加・削除・移動など)が混ざっていないか確認する。混ざっていれば一覧で示し、同じコミットに含めるか分けるかを人間に決めさせる。勝手に `git add -A` しない。`daily/untagged/` から `daily/tagged/` への移動は `$tag-dailies` の通常の出力であり、無関係な変更ではない。
 3. **機密の確認**:コミット対象の差分に、インサイダー情報(MNPI)や勤務先の機密にあたりうる記述が新しく含まれていないか見る。判定基準は `AGENTS.md` の「Sensitive content」。該当しそうなものがあれば、ファイル・行・なぜ該当しそうかを手順6の確認に併せて提示する。**見つけてもコミットを止めず、本文も書き換えない**(FAIL-35)。リモートへ push すると取り消せないため、ここが最後の関所になる。すでに人間が見て残すと決めたものを蒸し返さない。
 4. 下の「AGENTS.md 更新要否」に照らして判定する。判定の根拠は必ず**実際の差分**とし、推測で判断しない。
 5. 更新が必要な場合のみ `AGENTS.md` を直す。差分に現れた事実だけを反映する。**新しい不変則(INV)や失敗モード(FAIL)を発明しない。** 節の追加・削除など構造的な変更が要るときは、その理由を添えて先に人間へ提案する。
@@ -28,7 +28,8 @@ description: "Review the working tree, update AGENTS.md only if the diff made it
 | 既存 skill の**手順**だけの変更(役割は不変) | 不要 | Vault skills は役割1行しか持たないため |
 | `_meta/taxonomy.md` のタグ増減 | **不要** | `AGENTS.md` はタグ一覧を持たない(正本は taxonomy.md) |
 | 目標ノート2枚(`type/north-star` / `type/monthly-goals`)の**移動・リネーム・削除** | **要** | File routing。AGENTS.md がパスをヒントとして載せているため |
-| `daily/` `inbox/` `permanent/` `references/` の中身 | **不要** | ノートの増減は構成の変更ではない(上の2枚の中身の変更も不要) |
+| `daily/` 配下のフォルダ構成の変更(`untagged/` `tagged/` の増減・改名) | **要** | File routing / Write permissions / Failure modes |
+| `daily/` `inbox/` `permanent/` `references/` の中身 | **不要** | ノートの増減も `untagged/`→`tagged/` の移動も構成の変更ではない(上の2枚の中身の変更も不要) |
 | `.obsidian/` `.gitignore` | 不要 | — |
 
 判断に迷う差分は「不要」に倒し、迷った理由を人間に報告する。`AGENTS.md` の肥大化は乖離と同じくらい害がある。毎セッション読まれるファイルであることを忘れない。
